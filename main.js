@@ -4,14 +4,19 @@
 
 import inquirer from "inquirer"
 import fetch from "node-fetch"
-import { retry } from "rxjs";
 
 async function askForPlayerResponse(promptWord, guessList) {
+    let guessesString = ``
+    for (x in guessList) {
+        guessesString += `
+        ` + x
+    }
     inquirer
         .prompt([
             {
             name: 'wordResponse',
             message: `previous guesses: ` + guessList + `
+            
             Guess the word: ` + promptWord,
             },
         ])
@@ -36,46 +41,50 @@ async function checkIfWord(word) {
 
 /// separate async function for getting a random word
 async function getRandomWord() {
-    // the swar tag prevents removes swear words from the pool
+    // the swear tag prevents removes swear words from the pool
     let randomWord
-    fetch("https://random-word-api.herokuapp.com/word?number=1&swear=0").then(async (response) => {
-        return response.json()
-    }).then( async (data) => {
-        // make this async, so it will not try to respond prior to the word arriving (returning undefined)
-        randomWord = data[1]
-        console.log(data)
-    }).catch(async () => {
-        console.log("Something went wrong when retrieving your word")
-    })
+    try {
+        let response = await fetch("https://random-word-api.herokuapp.com/word?number=1&swear=0")
+        let json = await response.json()
+        randomWord = json.pop()
+    } catch {
+        console.log("Something went wrong when retrieving your word from the api, please run the file again. if the  problem persists, check the status of the api at https://random-word-api.herokuapp.com/home")
+    }
 }
 
-function anagramsGame() {
+function shuffleLetters(lettersArray) {
+    for (i = lettersArray.length() -1; i >0; i--) {
+            const j = Math.floor(Math.random() * (i + 1))
+            /// below we shuffle around the array object posistions using the random letters
+            const temp = lettersArray[i]
+            lettersArray[i] = lettersArray[j]
+            lettersArray[j] = temp 
+        }
+}
+
+async function anagramsGame() {
     let correctAnswer = false
     let guessedWords = []
     
     // Greet the user
     console.log("Welcome to anagrams")
-    console.log(`The letters of a random word are displayed. Type in your guess for the word and hit ENTER. If your guess is correct, you win. If your guess is incorrect, it will be added to the list and you will be prompted to guess again.`)
+    console.log(`The letters of a random word are displayed. 
+Type in your guess for the word and hit ENTER. 
+If your guess is correct, you win. 
+If your guess is incorrect, it will be added to the list and you will be prompted to guess again.`)
     
+    // async here fails, I cannot get it to work.
     let randomWord = await getRandomWord()
     
     // Scramble the word
+    // old shuffle code
+    // let wordLetters = randomWord.split("")
+    // let shuffledArray = wordLetters.sort((a, b) => 0.5 - Math.random())
+    // let shuffledWord = shuffledArray.join("")
+
     let wordLetters = randomWord.split("")
-    let shuffledArray = wordLetters.sort((a, b) => 0.5 - Math.random())
-    let shuffledWord = shuffledArray.join("")
-    
-    // Using the Fisher-Yates algorithm to randomize the letters (failed, saved for later)
-    // let shuffledLetters = wordLetters => {
-    //     for (i = wordLetters.length() -1; i >0; i--) {
-    //         const j = Math.floor(Math.random() * (i + 1))
-    //         /// below we shuffle around the array object posistions using the random letters
-    //         const temp = wordLetters[i]
-    //         wordLetters[i] = wordLetters[j]
-    //         wordLetters[j] = temp 
-    //     }
-    // }
-    // shuffledLetters()
-    // console.log(wordLetters)
+    shuffleLetters(wordLetters)
+    let shuffledWord = wordLetters.join("")
 
     // Allow for player word entry
     let playerResponse
@@ -84,17 +93,32 @@ function anagramsGame() {
         playerResponse = await askForPlayerResponse(shuffledWord, guessedWords)
         // Validate that the word is not a duplicate
         if (guessedWords.includes(playerResponse)) {
+            console.log("You have already guessed " + playerResponse)
             continue
         } else {
-            // Validate that it only uses the letters allowed (split both strings, compare letters?)
+            // Validate that it only uses the letters allowed
+            let tempLettersArray = shuffledWord.split("")
+            let splitPlayerResponse  = playerResponse.split("")
+            let usesValidLetters = true
+            for (x in splitPlayerResponse) {
+                let index = tempLettersArray.indexOf(x)
+                if (index !== -1) {
+                    tempLettersArray.splice(index, 1)
+                } else {
+                    usesValidLetters = false
+                }
+            }
 
-            // Validate if it is a valid word
-            let isWord = await checkIfWord(playerResponse)
-            if (isWord == true) {
-                guessedWords.push(playerResponse)
-            } else {
-                // Not sure if I should add non-words to the list, instructions are nto clear
-                console.log(playerResponse + " is not a valid word")
+            // Do not execute below code if fails previous tests
+            if (usesValidLetters = true) {
+                // Validate if it is a valid word
+                let isWord = await checkIfWord(playerResponse)
+                if (isWord == true) {
+                    guessedWords.push(playerResponse)
+                } else {
+                    // Not sure if I should add non-words to the list, instructions are nto clear
+                    console.log(playerResponse + " is not a valid word")
+                }
             }
         }
     }
@@ -116,4 +140,4 @@ function anagramsGame() {
         });
 }
 
-anagramsGame()
+await anagramsGame()
