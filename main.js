@@ -96,9 +96,9 @@ If your guess is incorrect, it will be added to the list and you will be prompte
             console.log("You have already guessed " + playerResponse)
             continue
         } else {
-            // Validate that it only uses the letters allowed
-            let tempLettersArray = shuffledWord.split("")
-            let splitPlayerResponse  = playerResponse.split("")
+            // Validate that it only uses the letters allowed (use lower case to avoid casing issues)
+            let tempLettersArray = shuffledWord.toLowerCase().split("")
+            let splitPlayerResponse  = playerResponse.toLowerCase().split("")
             let usesValidLetters = true
             for (x in splitPlayerResponse) {
                 let index = tempLettersArray.indexOf(x)
@@ -110,11 +110,18 @@ If your guess is incorrect, it will be added to the list and you will be prompte
             }
 
             // Do not execute below code if fails previous tests
+            let isWord = false
             if (usesValidLetters = true) {
                 // Validate if it is a valid word
-                let isWord = await checkIfWord(playerResponse)
+                isWord = await checkIfWord(playerResponse)
                 if (isWord == true) {
                     guessedWords.push(playerResponse)
+                    // Checking if the response if the correct word
+                    if (playerResponse.toLowerCase() == randomWord.toLowerCase()) {
+                        correctAnswer = true
+                    } else {
+                        console.log("Incorrect, please guess again.")
+                    }
                 } else {
                     // Not sure if I should add non-words to the list, instructions are nto clear
                     console.log(playerResponse + " is not a valid word")
