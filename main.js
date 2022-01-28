@@ -15,7 +15,7 @@ async function askForPlayerResponse(promptWord, guessList) {
         .prompt([
             {
             name: 'wordResponse',
-            message: `previous guesses: ` + guessList + `
+            message: `previous guesses: ` + guessesString + `
             
             Guess the word: ` + promptWord,
             },
@@ -47,6 +47,10 @@ async function getRandomWord() {
         let response = await fetch("https://random-word-api.herokuapp.com/word?number=1&swear=0")
         let json = await response.json()
         randomWord = json.pop()
+        // This account for my implementation for hints, to prevent asking for a hint preventing you from guessing the word
+        if (randomWord == 'hint') {
+            getRandomWord()
+        }
     } catch {
         console.log("Something went wrong when retrieving your word from the api, please run the file again. if the  problem persists, check the status of the api at https://random-word-api.herokuapp.com/home")
     }
@@ -91,40 +95,46 @@ If your guess is incorrect, it will be added to the list and you will be prompte
     // This will loop until word is found and we change to true
     while (correctAnswer == false) {
         playerResponse = await askForPlayerResponse(shuffledWord, guessedWords)
-        // Validate that the word is not a duplicate
-        if (guessedWords.includes(playerResponse)) {
-            console.log("You have already guessed " + playerResponse)
-            continue
+        // Hint functionality
+        if (playerResponse == 'hint') {
+            let splitWord = randomWord.split("")
+            console.log("The first letter of the word is " + splitWord[0])
         } else {
-            // Validate that it only uses the letters allowed (use lower case to avoid casing issues)
-            let tempLettersArray = shuffledWord.toLowerCase().split("")
-            let splitPlayerResponse  = playerResponse.toLowerCase().split("")
-            let usesValidLetters = true
-            for (x in splitPlayerResponse) {
-                let index = tempLettersArray.indexOf(x)
-                if (index !== -1) {
-                    tempLettersArray.splice(index, 1)
-                } else {
-                    usesValidLetters = false
-                }
-            }
-
-            // Do not execute below code if fails previous tests
-            let isWord = false
-            if (usesValidLetters = true) {
-                // Validate if it is a valid word
-                isWord = await checkIfWord(playerResponse)
-                if (isWord == true) {
-                    guessedWords.push(playerResponse)
-                    // Checking if the response if the correct word
-                    if (playerResponse.toLowerCase() == randomWord.toLowerCase()) {
-                        correctAnswer = true
+            // Validate that the word is not a duplicate
+            if (guessedWords.includes(playerResponse)) {
+                console.log("You have already guessed " + playerResponse)
+                continue
+            } else {
+                // Validate that it only uses the letters allowed (use lower case to avoid casing issues)
+                let tempLettersArray = shuffledWord.toLowerCase().split("")
+                let splitPlayerResponse  = playerResponse.toLowerCase().split("")
+                let usesValidLetters = true
+                for (x in splitPlayerResponse) {
+                    let index = tempLettersArray.indexOf(x)
+                    if (index !== -1) {
+                        tempLettersArray.splice(index, 1)
                     } else {
-                        console.log("Incorrect, please guess again.")
+                        usesValidLetters = false
                     }
-                } else {
-                    // Not sure if I should add non-words to the list, instructions are nto clear
-                    console.log(playerResponse + " is not a valid word")
+                }
+
+                // Do not execute below code if fails previous tests
+                let isWord = false
+                if (usesValidLetters = true) {
+                    // Validate if it is a valid word
+                    isWord = await checkIfWord(playerResponse)
+                    if (isWord == true) {
+                        guessedWords.push(playerResponse)
+                        // Checking if the response if the correct word
+                        if (playerResponse.toLowerCase() == randomWord.toLowerCase()) {
+                            correctAnswer = true
+                        } else {
+                            console.log("Incorrect, please guess again.")
+                        }
+                    } else {
+                        // Not sure if I should add non-words to the list, instructions are nto clear
+                        console.log(playerResponse + " is not a valid word")
+                    }
                 }
             }
         }
